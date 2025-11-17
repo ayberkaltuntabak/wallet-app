@@ -168,8 +168,3 @@ mvn spotless:check      # verify formatting without changing files
 
 Checkstyle currently reports warnings without failing the build; enable stricter behavior by setting `<failsOnError>true</failsOnError>` once the codebase is compliant.
 
-## Next Steps
-
-* Add more integration/api tests (MockMvc/WebTestClient or Testcontainers) to cover edge cases.
-* Swap H2 for PostgreSQL/MySQL in production profiles.
-* Plug in an external message bus to publish wallet/transaction events in real time.
