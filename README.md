@@ -99,6 +99,10 @@ See `wallet-api.http` for ready-to-run HTTP examples. Swagger UI (`/swagger-ui.h
 - Pending deposits temporarily increase only `balance`; approvals move the amount into `usableBalance` while denials roll `balance` back.
 - Pending withdraws reserve the amount by decreasing only `usableBalance`; approvals reduce `balance` while denials restore the reserved funds.
 
+### Audit Logging
+
+A cross-cutting aspect writes a row to `transaction_audit_logs` each time a deposit/withdraw is created or a pending transaction changes status. Audit entries store the transaction id, actor id, action (`DEPOSIT_CREATED`, `WITHDRAW_CREATED`, `STATUS_CHANGED`), a serialized detail string, and the timestamp to simplify reconciliation.
+
 ## Docker & Compose
 
 The repository ships with a multi-stage `Dockerfile`. Build/run manually:
@@ -138,6 +142,7 @@ Keeps contexts lightweight by ignoring `target/`, IDE metadata, HTTP files, etc.
 * Default datasource: H2 in-memory (`jdbc:h2:mem:walletdb`).
 * H2 console exposed at `/h2-console` (enabled for local dev only).
 * Seed data inserted via `src/main/resources/data.sql`.
+* Audit events for transaction operations live in `transaction_audit_logs` (query via the H2 console to review activity).
 * To inspect data live, connect to the console with `jdbc:h2:mem:walletdb`, username `sa`, empty password.
 
 ## Monitoring & Metrics

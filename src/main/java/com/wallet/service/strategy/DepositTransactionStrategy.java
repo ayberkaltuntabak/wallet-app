@@ -16,7 +16,7 @@ public class DepositTransactionStrategy implements TransactionStrategy {
 
   @Override
   public void validate(TransactionRequestContext context) {
-    // no deposit-specific validation currently
+    // no deposit-specific validation currently I believe that all deposits are allowed whether wallet is active or not for withdrawals/shopping
   }
 
   @Override

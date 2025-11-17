@@ -1,5 +1,6 @@
 package com.wallet.integration;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -8,10 +9,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wallet.enums.OppositePartyType;
+import com.wallet.enums.TransactionAuditAction;
 import com.wallet.enums.TransactionStatus;
+import com.wallet.model.TransactionAuditLog;
+import com.wallet.repository.TransactionAuditLogRepository;
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -26,6 +32,12 @@ class WalletTransactionIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
+  @Autowired private TransactionAuditLogRepository auditLogRepository;
+
+  @BeforeEach
+  void cleanAuditLogs() {
+    auditLogRepository.deleteAll();
+  }
 
   @Test
   void depositAndWithdrawFlow() throws Exception {
@@ -33,7 +45,10 @@ class WalletTransactionIntegrationTest {
 
     Long walletId = createWallet(token, "Integration-" + System.nanoTime(), false, true);
 
-    deposit(token, walletId, BigDecimal.valueOf(250), TransactionStatus.APPROVED);
+    Long approvedTransactionId =
+        deposit(token, walletId, BigDecimal.valueOf(250), TransactionStatus.APPROVED);
+
+    assertAuditLog(approvedTransactionId, TransactionAuditAction.DEPOSIT_CREATED, 1);
 
     mockMvc
         .perform(
@@ -69,6 +84,7 @@ class WalletTransactionIntegrationTest {
         deposit(customerToken, walletId, BigDecimal.valueOf(1500), TransactionStatus.PENDING);
 
     assertWalletBalances(customerToken, walletId, 1500, 0);
+    assertAuditLog(transactionId, TransactionAuditAction.DEPOSIT_CREATED, 1);
 
     Map<String, Object> requestBody = Map.of("status", TransactionStatus.DENIED.name());
 
@@ -82,6 +98,7 @@ class WalletTransactionIntegrationTest {
         .andExpect(jsonPath("$.status").value(TransactionStatus.DENIED.name()));
 
     assertWalletBalances(customerToken, walletId, 0, 0);
+    assertAuditLog(transactionId, TransactionAuditAction.STATUS_CHANGED, 2);
   }
 
   private String login(String tckn, String password) throws Exception {
@@ -151,5 +168,12 @@ class WalletTransactionIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.balance").value(balance))
         .andExpect(jsonPath("$.usableBalance").value(usableBalance));
+  }
+
+  private void assertAuditLog(
+      Long transactionId, TransactionAuditAction lastAction, int expectedCount) {
+    List<TransactionAuditLog> logs = auditLogRepository.findByTransactionId(transactionId);
+    assertThat(logs).hasSize(expectedCount);
+    assertThat(logs.get(logs.size() - 1).getAction()).isEqualTo(lastAction);
   }
 }
