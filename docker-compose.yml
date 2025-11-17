@@ -1,0 +1,11 @@
+services:
+  wallet-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wallet-app:latest
+    ports:
+      - "8080:8080"
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-change-me-please-change-me-please-change-me}
+      JAVA_OPTS: ${JAVA_OPTS:-}

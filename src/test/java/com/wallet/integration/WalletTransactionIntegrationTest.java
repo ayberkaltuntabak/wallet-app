@@ -1,0 +1,113 @@
+package com.wallet.integration;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wallet.enums.OppositePartyType;
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class WalletTransactionIntegrationTest {
+
+  @Autowired private MockMvc mockMvc;
+  @Autowired private ObjectMapper objectMapper;
+
+  @Test
+  void depositAndWithdrawFlow() throws Exception {
+    String token = login("10000000012", "Customer123!");
+
+    Long walletId = createWallet(token, "Integration-" + System.nanoTime(), false, true);
+
+    deposit(token, walletId, BigDecimal.valueOf(250));
+
+    mockMvc
+        .perform(
+            get("/api/v1/transactions")
+                .param("walletId", walletId.toString())
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].status").value("APPROVED"));
+
+    Map<String, Object> withdrawBody = new HashMap<>();
+    withdrawBody.put("walletId", walletId);
+    withdrawBody.put("amount", 50);
+    withdrawBody.put("destination", "PAY-123");
+    withdrawBody.put("destinationType", OppositePartyType.PAYMENT.name());
+
+    mockMvc
+        .perform(
+            post("/api/v1/transactions/withdraw")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(withdrawBody)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("Wallet not enabled for shopping payments"));
+  }
+
+  private String login(String tckn, String password) throws Exception {
+    Map<String, Object> body = Map.of("tckn", tckn, "password", password);
+    // TODO: when refresh token endpoints ship, expand this helper to cover refresh flow too.
+    MvcResult result =
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(body)))
+            .andExpect(status().isOk())
+            .andReturn();
+    JsonNode node = objectMapper.readTree(result.getResponse().getContentAsString());
+    return node.get("accessToken").asText();
+  }
+
+  private Long createWallet(String token, String name, boolean shopping, boolean withdraw)
+      throws Exception {
+    Map<String, Object> body = new HashMap<>();
+    body.put("walletName", name);
+    body.put("currency", "TRY");
+    body.put("activeForShopping", shopping);
+    body.put("activeForWithdraw", withdraw);
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                post("/api/v1/wallets")
+                    .header("Authorization", "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(body)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    JsonNode node = objectMapper.readTree(result.getResponse().getContentAsString());
+    return node.get("id").asLong();
+  }
+
+  private void deposit(String token, Long walletId, BigDecimal amount) throws Exception {
+    Map<String, Object> body = new HashMap<>();
+    body.put("walletId", walletId);
+    body.put("amount", amount);
+    body.put("source", "TR123");
+    body.put("sourceType", OppositePartyType.IBAN.name());
+
+    mockMvc
+        .perform(
+            post("/api/v1/transactions/deposit")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("APPROVED"));
+  }
+}

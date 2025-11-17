@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:walletdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    defer-datasource-initialization: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+jwt:
+  issuer: wallet-app
+  access-token-validity-ms: 900000
+  refresh-token-validity-ms: 604800000
+  secret: 7b9d7a08d5014dbebc7d473c5c40708c93da222b5961dce0836a8e30d594ec5f
+
+logging:
+  level:
+    org.springframework.security: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

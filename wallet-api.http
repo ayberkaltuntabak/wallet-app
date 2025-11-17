@@ -1,0 +1,110 @@
+@baseUrl = http://localhost:8080/api/v1
+
+### Customer login
+# @name loginCustomer
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "tckn": "10000000012",
+  "password": "Customer123!"
+}
+###
+@customerToken = {{loginCustomer.response.body.accessToken}}
+
+### Employee login
+# @name loginEmployee
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "tckn": "10000000001",
+  "password": "Password123!"
+}
+###
+@employeeToken = {{loginEmployee.response.body.accessToken}}
+
+### Register new customer (optional helper)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test",
+  "surname": "Customer",
+  "tckn": "20000000008",
+  "password": "Password123!"
+}
+
+# Create Wallet (copy the `id` for later requests)
+# @name createWallet
+POST {{baseUrl}}/wallets
+Content-Type: application/json
+Authorization: Bearer {{customerToken}}
+
+{
+  "walletName": "Travel Wallet",
+  "currency": "EUR",
+  "activeForShopping": true,
+  "activeForWithdraw": true
+}
+
+### Create Wallet on behalf of another customer (Employee)
+POST {{baseUrl}}/wallets
+Content-Type: application/json
+Authorization: Bearer {{employeeToken}}
+
+{
+  "walletName": "Ops Wallet",
+  "currency": "USD",
+  "activeForShopping": true,
+  "activeForWithdraw": true,
+  "customerId": 3
+}
+
+### List Wallets (self)
+GET {{baseUrl}}/wallets
+Authorization: Bearer {{customerToken}}
+
+### List Wallets (employee filtered)
+GET {{baseUrl}}/wallets?customerId=2
+Authorization: Bearer {{employeeToken}}
+
+### Deposit
+# Uses wallet id 1 by default (seed data); update as needed.
+POST {{baseUrl}}/transactions/deposit
+Content-Type: application/json
+Authorization: Bearer {{customerToken}}
+
+{
+  "walletId": 1,
+  "amount": 850,
+  "source": "TR120006123456789000123456",
+  "sourceType": "IBAN"
+}
+
+### Withdraw
+# Demonstrates shopping flag guard; update destinationType to IBAN to allow it.
+POST {{baseUrl}}/transactions/withdraw
+Content-Type: application/json
+Authorization: Bearer {{customerToken}}
+
+{
+  "walletId": 1,
+  "amount": 1500,
+  "destination": "TR660006123456789000654321",
+  "destinationType": "IBAN"
+}
+
+### List Transactions
+GET {{baseUrl}}/transactions?walletId=1
+Authorization: Bearer {{customerToken}}
+
+### Approve Transaction (Employee)
+# Approves transaction id 2 from seed data
+POST {{baseUrl}}/transactions/2/approve
+Content-Type: application/json
+Authorization: Bearer {{employeeToken}}
+
+{
+  "status": "APPROVED"
+}
