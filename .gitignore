@@ -2,6 +2,5 @@
 target/
 .idea/
 *.iml
-jdk-21.0.5+11/
-temurin21.tar.gz
 .vscode/
+.DS_Store

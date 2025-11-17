@@ -1,4 +1,5 @@
 @baseUrl = http://localhost:8080/api/v1
+@pendingTransactionId = 1
 
 ### Customer login
 # @name loginCustomer
@@ -82,6 +83,18 @@ Authorization: Bearer {{customerToken}}
   "sourceType": "IBAN"
 }
 
+### Deposit (forces manual approval by exceeding threshold)
+POST {{baseUrl}}/transactions/deposit
+Content-Type: application/json
+Authorization: Bearer {{customerToken}}
+
+{
+  "walletId": 1,
+  "amount": 1500,
+  "source": "TR120006123456789000123456",
+  "sourceType": "IBAN"
+}
+
 ### Withdraw
 # Demonstrates shopping flag guard; update destinationType to IBAN to allow it.
 POST {{baseUrl}}/transactions/withdraw
@@ -100,11 +113,20 @@ GET {{baseUrl}}/transactions?walletId=1
 Authorization: Bearer {{customerToken}}
 
 ### Approve Transaction (Employee)
-# Approves transaction id 2 from seed data
-POST {{baseUrl}}/transactions/2/approve
+# Replace {{pendingTransactionId}} with a PENDING transaction id from the list response
+POST {{baseUrl}}/transactions/{{pendingTransactionId}}
 Content-Type: application/json
 Authorization: Bearer {{employeeToken}}
 
 {
   "status": "APPROVED"
+}
+
+### Deny Transaction (Employee)
+POST {{baseUrl}}/transactions/{{pendingTransactionId}}
+Content-Type: application/json
+Authorization: Bearer {{employeeToken}}
+
+{
+  "status": "DENIED"
 }

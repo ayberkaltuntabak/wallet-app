@@ -49,9 +49,9 @@ public class TransactionController {
     return ResponseEntity.ok(transactionService.getTransaction(transactionId));
   }
 
-  @PostMapping("/{transactionId}/approve")
+  @PostMapping("/{transactionId}")
   @PreAuthorize("hasAuthority('EMPLOYEE')")
-  public ResponseEntity<TransactionResponse> approve(
+  public ResponseEntity<TransactionResponse> updateStatus(
       @PathVariable("transactionId") Long transactionId,
       @Valid @RequestBody ApproveTransactionRequest request) {
     return ResponseEntity.ok(transactionService.approveOrDeny(transactionId, request));

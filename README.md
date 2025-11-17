@@ -68,6 +68,7 @@ The service listens on `http://localhost:8080`. Swagger UI is available at `/swa
 | Customer | 10000000012 | Customer123!   |
 
 Use the employee token to exercise approval endpoints. New customers can self-register via `POST /api/v1/auth/register`.
+The seed script (`src/main/resources/data.sql`) only creates the two users above and two sample wallets so you can start with a clean transaction history—use the HTTP collection to create deposits/withdraws that fit your scenario.
 
 ## API Surface
 
@@ -87,9 +88,16 @@ All endpoints are rooted at `/api/v1`. Authentication uses `Authorization: Beare
 | `POST /transactions/withdraw` | Withdraw/pay to IBAN/payment destination. | Authenticated |
 | `GET /transactions?walletId=` | Wallet transaction history. | Authenticated owner/employee |
 | `GET /transactions/{id}` | Transaction detail. | Authenticated owner/employee |
-| `POST /transactions/{id}/approve` | Approve/deny pending transactions. | Employee |
+| `POST /transactions/{id}` | Approve/deny pending transactions. | Employee |
 
 See `wallet-api.http` for ready-to-run HTTP examples. Swagger UI (`/swagger-ui.html`) now includes a `BearerAuth` button so you can paste a JWT once and call secured endpoints interactively.
+
+### Transaction Approval Flow
+
+- Deposits or withdraws above 1000 units are automatically marked `PENDING`, everything else is auto-approved.
+- Employees finalize a transaction by calling `POST /api/v1/transactions/{id}` with `{"status":"APPROVED"}` or `{"status":"DENIED"}`.
+- Pending deposits temporarily increase only `balance`; approvals move the amount into `usableBalance` while denials roll `balance` back.
+- Pending withdraws reserve the amount by decreasing only `usableBalance`; approvals reduce `balance` while denials restore the reserved funds.
 
 ## Docker & Compose
 
